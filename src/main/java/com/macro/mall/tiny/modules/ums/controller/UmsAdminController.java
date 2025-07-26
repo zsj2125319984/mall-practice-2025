@@ -90,11 +90,26 @@ public class UmsAdminController {
         return CommonResult.success(map);
     }
 
+    /**
+     * 刷新token
+     * @param request
+     * @return {@link CommonResult }
+     */
     @ApiOperation(value = "刷新token")
     @RequestMapping(value = "/refreshToken", method = RequestMethod.GET)
     @ResponseBody
     public CommonResult refreshToken(HttpServletRequest request) {
-        return CommonResult.success(null);
+        String refreshedToken = adminService.refreshToken(request.getHeader(tokenHeader));
+
+        if(refreshedToken == null){
+            CommonResult.failed("token已过期");
+        }
+
+        Map<String,Object> map = new HashMap<>();
+        map.put("token",refreshedToken);
+        map.put("tokenHead",tokenHead);
+
+        return CommonResult.success(map);
     }
 
     /**
@@ -160,35 +175,92 @@ public class UmsAdminController {
     @RequestMapping(value = "/{id}", method = RequestMethod.GET)
     @ResponseBody
     public CommonResult<UmsAdmin> getItem(@PathVariable Long id) {
-        return CommonResult.success(null);
+        UmsAdmin umsAdmin = adminService.getById(id);
+
+        return CommonResult.success(umsAdmin);
     }
 
+    /**
+     * 修改指定用户信息
+     * @param id
+     * @param admin
+     * @return {@link CommonResult }
+     */
     @ApiOperation("修改指定用户信息")
     @RequestMapping(value = "/update/{id}", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult update(@PathVariable Long id, @RequestBody UmsAdmin admin) {
-        return CommonResult.success(null);
+        boolean success = adminService.update(id, admin);
+
+        if(success){
+            return CommonResult.success(null);
+        }
+
+        return CommonResult.failed();
     }
 
+    /**
+     * 修改指定用户密码
+     * @param updatePasswordParam
+     * @return {@link CommonResult }
+     */
     @ApiOperation("修改指定用户密码")
     @RequestMapping(value = "/updatePassword", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult updatePassword(@Validated @RequestBody UpdateAdminPasswordParam updatePasswordParam) {
-        return CommonResult.success(null);
+        int status = adminService.updatePassword(updatePasswordParam);
+
+        if(status > 0){
+            return CommonResult.success(status);
+        } else if (status == -1) {
+            return CommonResult.failed("参数有误");
+        }else if(status == -2){
+            return CommonResult.failed("用户不存在");
+        }else if(status == -3){
+            return CommonResult.failed("旧密码错误");
+        }
+
+        return CommonResult.failed();
     }
 
+    /**
+     * 删除指定用户信息
+     * @param id
+     * @return {@link CommonResult }
+     */
     @ApiOperation("删除指定用户信息")
     @RequestMapping(value = "/delete/{id}", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult delete(@PathVariable Long id) {
-        return CommonResult.success(null);
+        boolean success = adminService.delete(id);
+
+        if(success){
+            CommonResult.success(null);
+        }
+
+        return CommonResult.failed();
     }
 
+    /**
+     * 修改帐号状态
+     * @param id
+     * @param status
+     * @return {@link CommonResult }
+     */
     @ApiOperation("修改帐号状态")
     @RequestMapping(value = "/updateStatus/{id}", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult updateStatus(@PathVariable Long id,@RequestParam(value = "status") Integer status) {
-        return CommonResult.success(null);
+        UmsAdmin umsAdmin = new UmsAdmin();
+        umsAdmin.setStatus(status);
+
+        boolean success = adminService.update(id,umsAdmin);
+
+        if (success) {
+            return CommonResult.success(null);
+        }
+
+        return CommonResult.failed();
     }
 
     /**
@@ -211,10 +283,17 @@ public class UmsAdminController {
         return CommonResult.failed();
     }
 
+    /**
+     * 获取指定用户的角色
+     * @param adminId
+     * @return {@link CommonResult }<{@link List }<{@link UmsRole }>>
+     */
     @ApiOperation("获取指定用户的角色")
     @RequestMapping(value = "/role/{adminId}", method = RequestMethod.GET)
     @ResponseBody
     public CommonResult<List<UmsRole>> getRoleList(@PathVariable Long adminId) {
-        return CommonResult.success(null);
+        List<UmsRole> roleList = adminService.getRoleList(adminId);
+
+        return CommonResult.success(roleList);
     }
 }

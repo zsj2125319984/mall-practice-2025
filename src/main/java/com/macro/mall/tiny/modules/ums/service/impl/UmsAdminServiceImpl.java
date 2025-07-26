@@ -173,6 +173,11 @@ public class UmsAdminServiceImpl extends ServiceImpl<UmsAdminMapper,UmsAdmin> im
         update(record,wrapper);
     }
 
+    /**
+     * 刷新token
+     * @param oldToken
+     * @return {@link String }
+     */
     @Override
     public String refreshToken(String oldToken) {
         return jwtTokenUtil.refreshHeadToken(oldToken);
@@ -201,31 +206,50 @@ public class UmsAdminServiceImpl extends ServiceImpl<UmsAdminMapper,UmsAdmin> im
         return page(page,wrapper);
     }
 
+    /**
+     * 修改指定用户信息
+     * @param id
+     * @param admin
+     * @return boolean
+     */
     @Override
     public boolean update(Long id, UmsAdmin admin) {
+        //设置用户信息中的id
         admin.setId(id);
-        UmsAdmin rawAdmin = getById(id);
-        if(rawAdmin.getPassword().equals(admin.getPassword())){
-            //与原加密密码相同的不需要修改
+        //根据id查询原用户信息
+        UmsAdmin oldAdmin = getById(id);
+        //检查现密码是否加密，若加密则无需更新密码，若未加密则加密后更新密码
+        if(oldAdmin.getPassword().equals(admin.getPassword())){
             admin.setPassword(null);
-        }else{
-            //与原加密密码不同的需要加密修改
+        }else {
             if(StrUtil.isEmpty(admin.getPassword())){
                 admin.setPassword(null);
-            }else{
+            }else {
                 admin.setPassword(passwordEncoder.encode(admin.getPassword()));
             }
         }
+        //更新数据
         boolean success = updateById(admin);
+        //根据id删除缓存
         getCacheService().delAdmin(id);
+
         return success;
     }
 
+    /**
+     * 删除指定用户信息
+     * @param id
+     * @return boolean
+     */
     @Override
     public boolean delete(Long id) {
+        //删除用户信息缓存
         getCacheService().delAdmin(id);
+        //根据id删除记录
         boolean success = removeById(id);
+        //删除用户对应资源缓存
         getCacheService().delResourceList(id);
+
         return success;
     }
 
@@ -260,6 +284,11 @@ public class UmsAdminServiceImpl extends ServiceImpl<UmsAdminMapper,UmsAdmin> im
         return count;
     }
 
+    /**
+     * 获取指定用户的角色
+     * @param adminId
+     * @return {@link List }<{@link UmsRole }>
+     */
     @Override
     public List<UmsRole> getRoleList(Long adminId) {
         return roleMapper.getRoleList(adminId);
@@ -278,23 +307,32 @@ public class UmsAdminServiceImpl extends ServiceImpl<UmsAdminMapper,UmsAdmin> im
         return resourceList;
     }
 
+    /**
+     * 修改指定用户密码
+     * @param param
+     * @return int
+     */
     @Override
     public int updatePassword(UpdateAdminPasswordParam param) {
+        //如果参数有一项为空则修改失败
         if(StrUtil.isEmpty(param.getUsername())
                 ||StrUtil.isEmpty(param.getOldPassword())
                 ||StrUtil.isEmpty(param.getNewPassword())){
             return -1;
         }
+        //如果根据用户名查不到用户记录则修改失败
         QueryWrapper<UmsAdmin> wrapper = new QueryWrapper<>();
         wrapper.lambda().eq(UmsAdmin::getUsername,param.getUsername());
         List<UmsAdmin> adminList = list(wrapper);
         if(CollUtil.isEmpty(adminList)){
             return -2;
         }
+        //如果原密码不正确则修改失败
         UmsAdmin umsAdmin = adminList.get(0);
         if(!passwordEncoder.matches(param.getOldPassword(),umsAdmin.getPassword())){
             return -3;
         }
+        //修改密码
         umsAdmin.setPassword(passwordEncoder.encode(param.getNewPassword()));
         updateById(umsAdmin);
         getCacheService().delAdmin(umsAdmin.getId());
