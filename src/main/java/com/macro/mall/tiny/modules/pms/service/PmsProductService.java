@@ -1,5 +1,6 @@
 package com.macro.mall.tiny.modules.pms.service;
 
+import com.macro.mall.tiny.modules.pms.dto.PmsProductParam;
 import com.macro.mall.tiny.modules.pms.model.PmsProduct;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -13,4 +14,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface PmsProductService extends IService<PmsProduct> {
 
+    /**
+     * 创建商品
+     * @param pmsProductParam
+     * @return int
+     */
+    int create(PmsProductParam pmsProductParam);
 }
