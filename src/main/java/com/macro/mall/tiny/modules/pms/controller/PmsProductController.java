@@ -1,18 +1,18 @@
 package com.macro.mall.tiny.modules.pms.controller;
 
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.macro.mall.tiny.common.api.CommonPage;
 import com.macro.mall.tiny.common.api.CommonResult;
 import com.macro.mall.tiny.modules.pms.dto.PmsProductParam;
+import com.macro.mall.tiny.modules.pms.dto.PmsProductQueryParam;
+import com.macro.mall.tiny.modules.pms.model.PmsProduct;
 import com.macro.mall.tiny.modules.pms.service.PmsProductService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * <p>
@@ -46,6 +46,23 @@ public class PmsProductController {
         }
 
         return CommonResult.failed();
+    }
+
+    /**
+     * 查询商品
+     * @param productQueryParam
+     * @param pageSize
+     * @param pageNum
+     * @return {@link CommonResult }<{@link CommonPage }<{@link PmsProduct }>>
+     */
+    @GetMapping("/list")
+    @ApiOperation("查询商品")
+    public CommonResult<CommonPage<PmsProduct>> list(PmsProductQueryParam productQueryParam,
+                                                     @RequestParam(value = "pageSize", defaultValue = "5") Integer pageSize,
+                                                     @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum){
+        Page<PmsProduct> page = productService.list(productQueryParam,pageNum,pageSize);
+
+        return CommonResult.success(null);
     }
 }
 

@@ -1,8 +1,11 @@
 package com.macro.mall.tiny.modules.pms.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.macro.mall.tiny.modules.pms.dto.PmsProductParam;
+import com.macro.mall.tiny.modules.pms.dto.PmsProductQueryParam;
 import com.macro.mall.tiny.modules.pms.model.PmsProduct;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * <p>
@@ -19,5 +22,15 @@ public interface PmsProductService extends IService<PmsProduct> {
      * @param pmsProductParam
      * @return int
      */
+    @Transactional
     int create(PmsProductParam pmsProductParam);
+
+    /**
+     * 查询商品
+     * @param productQueryParam
+     * @param pageNum
+     * @param pageSize
+     * @return {@link Page }<{@link PmsProduct }>
+     */
+    Page<PmsProduct> list(PmsProductQueryParam productQueryParam, Integer pageNum, Integer pageSize);
 }
