@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * <p>
  * 商品信息 前端控制器
@@ -62,7 +64,20 @@ public class PmsProductController {
                                                      @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum){
         Page<PmsProduct> page = productService.list(productQueryParam,pageNum,pageSize);
 
-        return CommonResult.success(null);
+        return CommonResult.success(CommonPage.restPage(page));
+    }
+
+    /**
+     * 根据商品名称或货号模糊查询
+     * @param keyword
+     * @return {@link CommonResult }<{@link List }<{@link PmsProduct }>>
+     */
+    @GetMapping("/simpleList")
+    @ApiOperation("根据商品名称或货号模糊查询")
+    public CommonResult<List<PmsProduct>> simpleList(String keyword){
+        List<PmsProduct> productList = productService.list(keyword);
+
+        return CommonResult.success(productList);
     }
 }
 

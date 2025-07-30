@@ -7,6 +7,8 @@ import com.macro.mall.tiny.modules.pms.model.PmsProduct;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * <p>
  * 商品信息 服务类
@@ -33,4 +35,11 @@ public interface PmsProductService extends IService<PmsProduct> {
      * @return {@link Page }<{@link PmsProduct }>
      */
     Page<PmsProduct> list(PmsProductQueryParam productQueryParam, Integer pageNum, Integer pageSize);
+
+    /**
+     * 根据商品名称或货号模糊查询
+     * @param keyword
+     * @return {@link List }<{@link PmsProduct }>
+     */
+    List<PmsProduct> list(String keyword);
 }

@@ -2,6 +2,9 @@ package com.macro.mall.tiny.modules.pms.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.macro.mall.tiny.modules.cms.mapper.CmsPrefrenceAreaProductRelationMapper;
 import com.macro.mall.tiny.modules.cms.mapper.CmsSubjectProductRelationMapper;
@@ -23,6 +26,7 @@ import org.springframework.util.CollectionUtils;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -40,6 +44,40 @@ public class PmsProductServiceImpl extends ServiceImpl<PmsProductMapper, PmsProd
 
     @Autowired
     private PmsMemberPriceService memberPriceService;
+    @Autowired
+    private PmsProductLadderService productLadderService;
+    @Autowired
+    private PmsProductFullReductionService productFullReductionService;
+    @Autowired
+    private PmsSkuStockService skuStockService;
+    @Autowired
+    private PmsProductAttributeValueService productAttributeValueService;
+    @Autowired
+    private CmsSubjectProductRelationService subjectProductRelationService;
+    @Autowired
+    private CmsPrefrenceAreaProductRelationService prefrenceAreaProductRelationService;
+
+    /**
+     * 根据商品名称或货号模糊查询
+     * @param keyword
+     * @return {@link List }<{@link PmsProduct }>
+     */
+    @Override
+    public List<PmsProduct> list(String keyword) {
+        QueryWrapper<PmsProduct> wrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<PmsProduct> lambda = wrapper.lambda();
+
+        lambda.and(w -> w.eq(PmsProduct::getDeleteStatus,0));
+        if(StrUtil.isNotEmpty(keyword)){
+            lambda.and(w -> w.like(PmsProduct::getName,keyword));
+            lambda.or(w -> w.like(PmsProduct::getProductSn,keyword)
+                    .eq(PmsProduct::getDeleteStatus,0));
+
+            //select * from product where delete_status = ? and name like ? or (product_sn like ? and delete_status = ?)
+        }
+
+        return list(wrapper);
+    }
 
     /**
      * 查询商品
@@ -50,26 +88,42 @@ public class PmsProductServiceImpl extends ServiceImpl<PmsProductMapper, PmsProd
      */
     @Override
     public Page<PmsProduct> list(PmsProductQueryParam productQueryParam, Integer pageNum, Integer pageSize) {
-        return null;
+        //设置查询条件
+        Page<PmsProduct> page = new Page<>(pageNum,pageSize);
+        QueryWrapper<PmsProduct> wrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<PmsProduct> lambda = wrapper.lambda();
+        //删除状态为0
+        lambda.and(w -> w.eq(PmsProduct::getDeleteStatus,0));
+        //根据Publish、Verify、名称关键字、ProductSn、BrandId、CategoryId多条件查询
+        if(productQueryParam.getPublishStatus() != null){
+            lambda.and(w ->
+                    w.eq(PmsProduct::getPublishStatus,productQueryParam.getPublishStatus()));
+        }
+        if(productQueryParam.getVerifyStatus() != null){
+            lambda.and(w ->
+                    w.eq(PmsProduct::getVerifyStatus,productQueryParam.getVerifyStatus()));
+        }
+        if(StrUtil.isNotEmpty(productQueryParam.getKeyword())){
+            lambda.and(w ->
+                    w.like(PmsProduct::getName,productQueryParam.getKeyword()));
+        }
+        if(StrUtil.isNotEmpty(productQueryParam.getProductSn())){
+            lambda.and(w ->
+                    w.eq(PmsProduct::getProductSn,productQueryParam.getProductSn()));
+        }
+        if(productQueryParam.getBrandId() != null){
+            lambda.and(w ->
+                    w.eq(PmsProduct::getBrandId,productQueryParam.getBrandId()));
+        }
+        if(productQueryParam.getProductCategoryId() != null){
+            lambda.and(w ->
+                    w.eq(PmsProduct::getProductCategoryId,productQueryParam.getProductCategoryId()));
+        }
+        //分页查询并返回结果
+        return page(page,wrapper);
     }
 
-    @Autowired
-    private PmsProductLadderService productLadderService;
 
-    @Autowired
-    private PmsProductFullReductionService productFullReductionService;
-
-    @Autowired
-    private PmsSkuStockService skuStockService;
-
-    @Autowired
-    private PmsProductAttributeValueService productAttributeValueService;
-
-    @Autowired
-    private CmsSubjectProductRelationService subjectProductRelationService;
-
-    @Autowired
-    private CmsPrefrenceAreaProductRelationService prefrenceAreaProductRelationService;
 
     /**
      * 创建商品
