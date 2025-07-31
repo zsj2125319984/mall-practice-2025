@@ -8,14 +8,15 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.macro.mall.tiny.modules.cms.mapper.CmsPrefrenceAreaProductRelationMapper;
 import com.macro.mall.tiny.modules.cms.mapper.CmsSubjectProductRelationMapper;
+import com.macro.mall.tiny.modules.cms.model.CmsPrefrenceAreaProductRelation;
+import com.macro.mall.tiny.modules.cms.model.CmsSubjectProductRelation;
 import com.macro.mall.tiny.modules.cms.service.CmsPrefrenceAreaProductRelationService;
 import com.macro.mall.tiny.modules.cms.service.CmsSubjectProductRelationService;
 import com.macro.mall.tiny.modules.pms.dto.PmsProductParam;
 import com.macro.mall.tiny.modules.pms.dto.PmsProductQueryParam;
+import com.macro.mall.tiny.modules.pms.dto.PmsProductResult;
 import com.macro.mall.tiny.modules.pms.mapper.*;
-import com.macro.mall.tiny.modules.pms.model.PmsMemberPrice;
-import com.macro.mall.tiny.modules.pms.model.PmsProduct;
-import com.macro.mall.tiny.modules.pms.model.PmsSkuStock;
+import com.macro.mall.tiny.modules.pms.model.*;
 import com.macro.mall.tiny.modules.pms.service.*;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -56,6 +58,237 @@ public class PmsProductServiceImpl extends ServiceImpl<PmsProductMapper, PmsProd
     private CmsSubjectProductRelationService subjectProductRelationService;
     @Autowired
     private CmsPrefrenceAreaProductRelationService prefrenceAreaProductRelationService;
+    @Autowired
+    private PmsProductVertifyRecordService productVertifyRecordService;
+
+    /**
+     * 更新商品
+     * @param id
+     * @param productParam
+     * @return int
+     */
+    @Override
+    public int update(Long id, PmsProductParam productParam) {
+        //获取实体类并更新商品
+        PmsProduct product;
+        product = productParam;
+        product.setId(id);
+        updateById(product);
+        //会员价格
+        QueryWrapper<PmsMemberPrice> wrapperMemberPrice = new QueryWrapper<>();
+        wrapperMemberPrice.lambda().eq(PmsMemberPrice::getProductId,id);
+        memberPriceService.remove(wrapperMemberPrice);
+        relateAndInsertList(memberPriceService,productParam.getMemberPriceList(),id);
+        //阶梯价格
+        QueryWrapper<PmsProductLadder> wrapperProductLadder = new QueryWrapper<>();
+        wrapperProductLadder.lambda().eq(PmsProductLadder::getProductId,id);
+        productLadderService.remove(wrapperProductLadder);
+        relateAndInsertList(productLadderService,productParam.getProductLadderList(),id);
+        //满减价格
+        QueryWrapper<PmsProductFullReduction> wrapperProductFullReduction = new QueryWrapper<>();
+        wrapperProductFullReduction.lambda().eq(PmsProductFullReduction::getProductId,id);
+        productFullReductionService.remove(wrapperProductFullReduction);
+        relateAndInsertList(productFullReductionService,productParam.getProductFullReductionList(),id);
+        //修改sku信息
+        handleUpdateSkuStockList(id, productParam);
+        //商品参数
+        QueryWrapper<PmsProductAttributeValue> wrapperProductAttributeValue = new QueryWrapper<>();
+        wrapperProductAttributeValue.lambda().eq(PmsProductAttributeValue::getProductId,id);
+        productAttributeValueService.remove(wrapperProductAttributeValue);
+        relateAndInsertList(productAttributeValueService,productParam.getProductAttributeValueList(),id);
+        //关联专题
+        QueryWrapper<CmsSubjectProductRelation> wrapperSubjectProductRelation = new QueryWrapper<>();
+        wrapperSubjectProductRelation.lambda().eq(CmsSubjectProductRelation::getProductId,id);
+        subjectProductRelationService.remove(wrapperSubjectProductRelation);
+        relateAndInsertList(subjectProductRelationService,productParam.getSubjectProductRelationList(),id);
+        //关联优选
+        QueryWrapper<CmsPrefrenceAreaProductRelation> wrapperPrefrenceAreaProductRelation = new QueryWrapper<>();
+        wrapperPrefrenceAreaProductRelation.lambda().eq(CmsPrefrenceAreaProductRelation::getProductId,id);
+        prefrenceAreaProductRelationService.remove(wrapperPrefrenceAreaProductRelation);
+        relateAndInsertList(prefrenceAreaProductRelationService,productParam.getPrefrenceAreaProductRelationList(),id);
+
+        return 1;
+    }
+
+    /**
+     * 处理sku的更新
+     * @param id
+     * @param productParam
+     */
+    private void handleUpdateSkuStockList(Long id, PmsProductParam productParam) {
+        //获取当前sku信息
+        List<PmsSkuStock> skuStockList = productParam.getSkuStockList();
+        //若为空则直接删除
+        if(CollUtil.isEmpty(skuStockList)){
+            QueryWrapper<PmsSkuStock> wrapper = new QueryWrapper<>();
+            wrapper.lambda().eq(PmsSkuStock::getProductId,id);
+            skuStockService.remove(wrapper);
+            return;
+        }
+        //从数据库获取原始sku信息
+        QueryWrapper<PmsSkuStock> wrapper2 = new QueryWrapper<>();
+        wrapper2.lambda().eq(PmsSkuStock::getProductId,id);
+        List<PmsSkuStock> originSkuStockList = skuStockService.list(wrapper2);
+        //获取新增的信息
+        List<PmsSkuStock> insertSkuStockList = skuStockList.stream()
+                .filter(pmsSkuStock -> pmsSkuStock.getId() == null)
+                .collect(Collectors.toList());
+        //获取更新的信息
+        List<PmsSkuStock> updateSkustockList = skuStockList.stream()
+                .filter(pmsSkuStock -> pmsSkuStock.getId() != null)
+                .collect(Collectors.toList());
+        List<Long> updateIds = updateSkustockList.stream()
+                .map(PmsSkuStock::getId)
+                .collect(Collectors.toList());
+        //获取删除的信息
+        List<PmsSkuStock> removeSkuStockList = originSkuStockList.stream()
+                .filter(pmsSkuStock -> !updateIds.contains(pmsSkuStock.getId()))
+                .collect(Collectors.toList());
+        //处理新增和更新列表的skuStockCode
+        handleSkuStockCode(insertSkuStockList,id);
+        handleSkuStockCode(updateSkustockList,id);
+        //新增sku
+        if(CollUtil.isNotEmpty(insertSkuStockList)){
+            relateAndInsertList(skuStockService,insertSkuStockList,id);
+        }
+        //删除sku
+        if(CollUtil.isNotEmpty(removeSkuStockList)){
+            List<Long> removeIds = removeSkuStockList.stream()
+                    .map(PmsSkuStock::getId)
+                    .collect(Collectors.toList());
+            QueryWrapper<PmsSkuStock> wrapper3 = new QueryWrapper<>();
+            wrapper3.lambda().in(PmsSkuStock::getId,removeIds);
+            skuStockService.remove(wrapper3);
+        }
+        //更新sku
+        if(CollUtil.isNotEmpty(updateSkustockList)){
+            skuStockService.updateBatchById(updateSkustockList);
+        }
+    }
+
+    /**
+     * 批量修改审核状态
+     * @param detail
+     * @param ids
+     * @param verifyStatus
+     * @return int
+     */
+    @Override
+    public int updateVerifyStatus(String detail, List<Long> ids, Integer verifyStatus) {
+        //修改审核状态
+        List<PmsProduct> productList = ids.stream().map(id -> {
+            PmsProduct product = new PmsProduct();
+            product.setId(id);
+            product.setVerifyStatus(verifyStatus);
+            return product;
+        }).collect(Collectors.toList());
+
+        boolean success = updateBatchById(productList);
+        //插入审核记录
+        List<PmsProductVertifyRecord> recordList = ids.stream().map(id -> {
+            PmsProductVertifyRecord productVertifyRecord = new PmsProductVertifyRecord();
+            productVertifyRecord.setProductId(id);
+            productVertifyRecord.setCreateTime(new Date());
+            productVertifyRecord.setDetail(detail);
+            productVertifyRecord.setStatus(verifyStatus);
+            productVertifyRecord.setVertifyMan("test");
+            return productVertifyRecord;
+        }).collect(Collectors.toList());
+
+        productVertifyRecordService.saveBatch(recordList);
+
+        return success ? ids.size() : 0;
+    }
+
+    /**
+     * 根据商品id获取商品编辑信息
+     * @param id
+     * @return {@link PmsProductResult }
+     */
+    @Override
+    public PmsProductResult updateInfo(Long id) {
+        return baseMapper.getUpdateInfo(id);
+    }
+
+    /**
+     * 批量推荐商品
+     * @param ids
+     * @param recommendStatus
+     * @return int
+     */
+    @Override
+    public int updateRecommendStatus(List<Long> ids, Integer recommendStatus) {
+        List<PmsProduct> productList = ids.stream().map(id -> {
+            PmsProduct product = new PmsProduct();
+            product.setId(id);
+            product.setRecommandStatus(recommendStatus);
+            return product;
+        }).collect(Collectors.toList());
+
+        boolean success = updateBatchById(productList);
+
+        return success ? ids.size() : 0;
+    }
+
+    /**
+     * 批量上下架商品
+     * @param ids
+     * @param publishStatus
+     * @return int
+     */
+    @Override
+    public int updatePublishStatus(List<Long> ids, Integer publishStatus) {
+        List<PmsProduct> productList = ids.stream().map(id -> {
+            PmsProduct product = new PmsProduct();
+            product.setId(id);
+            product.setPublishStatus(publishStatus);
+            return product;
+        }).collect(Collectors.toList());
+
+        boolean success = updateBatchById(productList);
+
+        return success ? ids.size() : 0;
+    }
+
+    /**
+     * 批量修改删除状态
+     * @param ids
+     * @param deleteStatus
+     * @return int
+     */
+    @Override
+    public int updateDeleteStatus(List<Long> ids, Integer deleteStatus) {
+        List<PmsProduct> productList = ids.stream().map(id -> {
+            PmsProduct product = new PmsProduct();
+            product.setId(id);
+            product.setDeleteStatus(deleteStatus);
+            return product;
+        }).collect(Collectors.toList());
+
+        boolean success = updateBatchById(productList);
+
+        return success ? ids.size() : 0;
+    }
+
+    /**
+     * 批量设为新品
+     * @param ids
+     * @param newStatus
+     * @return int
+     */
+    @Override
+    public int updateNewStatus(List<Long> ids, Integer newStatus) {
+        List<PmsProduct> productList = ids.stream().map(id -> {
+            PmsProduct product = new PmsProduct();
+            product.setId(id);
+            product.setNewStatus(newStatus);
+            return product;
+        }).collect(Collectors.toList());
+
+        boolean success = updateBatchById(productList);
+
+        return success ? ids.size() : 0;
+    }
 
     /**
      * 根据商品名称或货号模糊查询
@@ -122,7 +355,6 @@ public class PmsProductServiceImpl extends ServiceImpl<PmsProductMapper, PmsProd
         //分页查询并返回结果
         return page(page,wrapper);
     }
-
 
 
     /**
