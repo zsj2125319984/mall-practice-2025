@@ -6,6 +6,9 @@ import com.macro.mall.tiny.modules.cms.service.CmsPrefrenceAreaService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * <p>
  * 优选专区 服务实现类
@@ -17,4 +20,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CmsPrefrenceAreaServiceImpl extends ServiceImpl<CmsPrefrenceAreaMapper, CmsPrefrenceArea> implements CmsPrefrenceAreaService {
 
+    @Override
+    public List<CmsPrefrenceArea> listAll() {
+        return list();
+    }
 }

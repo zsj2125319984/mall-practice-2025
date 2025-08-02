@@ -18,4 +18,16 @@
         <result column="type" property="type" />
     </resultMap>
 
+    <select id="getProductAttrInfo" resultType="com.macro.mall.tiny.modules.pms.dto.ProductAttrInfo">
+        SELECT
+            pa.id  attributeId,
+            pac.id attributeCategoryId
+        FROM
+            pms_product_category_attribute_relation pcar
+                LEFT JOIN pms_product_attribute pa ON pa.id = pcar.product_attribute_id
+                LEFT JOIN pms_product_attribute_category pac ON pa.product_attribute_category_id = pac.id
+        WHERE
+            pcar.product_category_id = #{id}
+    </select>
+
 </mapper>

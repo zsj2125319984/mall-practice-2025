@@ -2,6 +2,9 @@ package com.macro.mall.tiny.modules.pms.mapper;
 
 import com.macro.mall.tiny.modules.pms.model.PmsSkuStock;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * <p>
@@ -12,5 +15,5 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @since 2025-07-28
  */
 public interface PmsSkuStockMapper extends BaseMapper<PmsSkuStock> {
-
+    int replaceList(@Param("list") List<PmsSkuStock> skuStockList);
 }
