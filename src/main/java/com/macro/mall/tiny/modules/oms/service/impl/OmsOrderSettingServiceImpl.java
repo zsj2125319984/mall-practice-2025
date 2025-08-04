@@ -17,4 +17,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class OmsOrderSettingServiceImpl extends ServiceImpl<OmsOrderSettingMapper, OmsOrderSetting> implements OmsOrderSettingService {
 
+    @Override
+    public OmsOrderSetting getItem(Long id) {
+        return getById(id);
+    }
+
+    @Override
+    public int update(Long id, OmsOrderSetting orderSetting) {
+        orderSetting.setId(id);
+
+        return updateById(orderSetting) ? 1 : 0;
+    }
 }

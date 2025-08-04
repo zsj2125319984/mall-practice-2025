@@ -1,0 +1,20 @@
+package com.macro.mall.tiny.modules.sms.service.impl;
+
+import com.macro.mall.tiny.modules.sms.model.SmsCouponProductCategoryRelation;
+import com.macro.mall.tiny.modules.sms.mapper.SmsCouponProductCategoryRelationMapper;
+import com.macro.mall.tiny.modules.sms.service.SmsCouponProductCategoryRelationService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+
+/**
+ * <p>
+ * 优惠券和产品分类关系表 服务实现类
+ * </p>
+ *
+ * @author Sicecream
+ * @since 2025-08-04
+ */
+@Service
+public class SmsCouponProductCategoryRelationServiceImpl extends ServiceImpl<SmsCouponProductCategoryRelationMapper, SmsCouponProductCategoryRelation> implements SmsCouponProductCategoryRelationService {
+
+}
